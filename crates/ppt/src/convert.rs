@@ -106,7 +106,7 @@ pub fn convert<'a>(d: &Doc<'a>, pictures: &'a [u8]) -> Presentation {
         master_props: HashMap::new(),
     };
     let environment = d.document.child(rt::ENVIRONMENT);
-    if let Some(hf) = doc::headers_footers(&d.document) {
+    if let Some(hf) = doc::headers_footers(&d.document, doc::HfScope::Document) {
         cx.p.header_footer = deckcraft_model::HeaderFooter {
             date: hf.date,
             slide_number: hf.slide_number,
@@ -354,7 +354,7 @@ impl<'a> Ctx<'a> {
         let background = if atom.follow_master_background { None } else { drawing.background.as_ref().and_then(|b| self.background(b, &scope)) };
         let mut shapes: Vec<Shape> = drawing.shapes.iter().filter_map(|r| self.shape(r, &scope, 0, TOP)).collect();
         // The slide's own headers and footers, else the document's for every slide.
-        if let Some(hf) = doc::headers_footers(&s.rec).or_else(|| doc::headers_footers(&d.document)) {
+        if let Some(hf) = doc::headers_footers(&s.rec, doc::HfScope::Slide).or_else(|| doc::headers_footers(&d.document, doc::HfScope::Document)) {
             self.footers(&mut shapes, &hf);
         }
         let hidden = s.rec.child(rt::SLIDE_SHOW_SLIDE_INFO).and_then(|i| i.u16(10)).is_some_and(|f| f & 0x4 != 0);

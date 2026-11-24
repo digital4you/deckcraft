@@ -306,8 +306,7 @@ pub fn fonts(doc: &Doc) -> Vec<String> {
         .collect()
 }
 
-/// What a `HeadersFootersContainer` ([MS-PPT] §2.4.15.1, instance 3: slides) says the footer row
-/// shows: the date (today's in a format, or fixed text), the slide number and the footer text.
+/// What a `HeadersFootersContainer` ([MS-PPT] §2.4.15.1) says the footer row of slides shows: the date (today's in a format, or fixed text), the slide number and the footer text.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct HeadersFooters {
     /// `formatId`: 0–12, the date format.
@@ -327,9 +326,23 @@ fn cstring_units(b: &[u8]) -> impl Iterator<Item = u16> + '_ {
     b.as_chunks::<2>().0.iter().map(|c| u16::from_le_bytes(*c)).take_while(|&u| u != 0)
 }
 
-/// The slides' headers and footers in `container` (a slide, or the document for every slide).
-pub fn headers_footers(container: &Rec) -> Option<HeadersFooters> {
-    let hf = container.children().find(|r| r.kind == rt::HEADERS_FOOTERS && r.instance == 3)?;
+/// Which `HeadersFootersContainer` to read: `recInstance` is 0x003 for the document's settings
+/// for every slide (0x004 there is the notes pages'), and 0x000 for a slide's own settings.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum HfScope {
+    /// In the `DocumentContainer`: the settings for every slide.
+    Document,
+    /// In a `SlideContainer`: that slide's own settings.
+    Slide,
+}
+
+/// The slides' headers and footers in `container`: the document's for every slide, or a slide's.
+pub fn headers_footers(container: &Rec, scope: HfScope) -> Option<HeadersFooters> {
+    let instance = match scope {
+        HfScope::Document => 3,
+        HfScope::Slide => 0,
+    };
+    let hf = container.children().find(|r| r.kind == rt::HEADERS_FOOTERS && r.instance == instance)?;
     let atom = hf.child(rt::HEADERS_FOOTERS_ATOM)?;
     let flags = atom.u16(2)?;
     let text = |instance: u16| {
