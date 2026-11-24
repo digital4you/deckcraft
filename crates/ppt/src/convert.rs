@@ -420,8 +420,16 @@ impl<'a> Ctx<'a> {
         TextBody::default()
     }
 
+    /// A background takes no drawing defaults: those are the default shape's look (its fill is
+    /// often the scheme's fill colour), and a background without a fill colour of its own is
+    /// white, the `fillColor` default of [MS-ODRAW] §2.3.7.2.
     fn background(&mut self, raw: &RawShape<'a>, scope: &Scope) -> Option<Background> {
-        let props = self.props_of(raw, scope, false);
+        let mut props = raw.props.clone();
+        if let Some(m) =
+            props.get(prop::HSP_MASTER).and_then(|spid| scope.masters.iter().flatten().find_map(|&master| self.master_props.get(&(master, spid))))
+        {
+            props.inherit(m);
+        }
         let fill = self.fill(&props, scope, true)?;
         Some(Background::Fill { fill })
     }
