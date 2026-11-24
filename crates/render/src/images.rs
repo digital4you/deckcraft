@@ -77,6 +77,13 @@ impl Anim {
 
 static CACHE: Mutex<Option<Cache>> = Mutex::new(None);
 
+/// Forget every decoded picture, failed source and decoded animation, so their memory is freed
+/// once no render holds them. Pictures decode again on their next use. For long-lived processes
+/// that render unrelated documents one after another and would otherwise keep up to the budget.
+pub fn clear() {
+    *CACHE.lock().unwrap_or_else(std::sync::PoisonError::into_inner) = None;
+}
+
 fn with<R>(f: impl FnOnce(&mut Cache) -> R) -> R {
     let mut g = CACHE.lock().unwrap_or_else(std::sync::PoisonError::into_inner);
     f(g.get_or_insert_with(Cache::default))
