@@ -16,6 +16,10 @@ pub mod prop {
     pub const TEXT_BOTTOM: u16 = 0x0084;
     pub const WRAP_TEXT: u16 = 0x0085;
     pub const ANCHOR_TEXT: u16 = 0x0087;
+    pub const GTEXT_UNICODE: u16 = 0x00C0;
+    pub const GTEXT_ALIGN: u16 = 0x00C2;
+    pub const GTEXT_FONT: u16 = 0x00C5;
+    pub const GTEXT_BOOLS: u16 = 0x00FF;
     pub const CROP_TOP: u16 = 0x0100;
     pub const CROP_BOTTOM: u16 = 0x0101;
     pub const CROP_LEFT: u16 = 0x0102;
@@ -57,6 +61,7 @@ pub mod prop {
     pub const SHADOW_OFFSET_Y: u16 = 0x0206;
     pub const SHADOW_BOOLS: u16 = 0x023F;
     pub const HSP_MASTER: u16 = 0x0301;
+    pub const TABLE_PROPERTIES: u16 = 0x039F;
     pub const NAME: u16 = 0x0380;
     pub const DESCRIPTION: u16 = 0x0381;
     pub const GROUP_BOOLS: u16 = 0x03BF;

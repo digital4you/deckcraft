@@ -474,7 +474,19 @@ impl<'a> Ctx<'a> {
             // Children are placed in slide points; the group's child space is its own box.
             let at = s.xfrm.unwrap_or_default();
             let inner = Map::into_group(&at, &raw.group_rect.unwrap_or(anchor));
-            let children = raw.children.iter().filter_map(|c| self.shape(c, scope, depth + 1, inner)).collect();
+            let mut children: Vec<Shape> = raw.children.iter().filter_map(|c| self.shape(c, scope, depth + 1, inner)).collect();
+            // A table ([MS-PPT] 2.13.11: a group whose `tableProperties` has `fIsTable`) keeps
+            // its cells in no reading order, often last row first and right to left. The cells
+            // go row by row, left to right; the border lines stay after them in file order.
+            if raw.props.get(prop::TABLE_PROPERTIES).is_some_and(|v| v & 1 != 0) {
+                let pos = |s: &Shape| s.xfrm.map_or((0.0, 0.0), |x| (x.y.round(), x.x));
+                let (mut cells, lines): (Vec<Shape>, Vec<Shape>) = children.into_iter().partition(|c| c.text.is_some());
+                cells.sort_by(|a, b| {
+                    let (a, b) = (pos(a), pos(b));
+                    a.0.total_cmp(&b.0).then(a.1.total_cmp(&b.1))
+                });
+                children = cells.into_iter().chain(lines).collect();
+            }
             let child = Xfrm::new(at.x, at.y, at.w, at.h);
             s.kind = ShapeKind::Group { children, child };
             return Some(s);
@@ -507,11 +519,76 @@ impl<'a> Ctx<'a> {
         }
         if let Some(block) = self.text_block(raw, scope) {
             s.text = Some(self.text_body(&block, scope, &props));
+        } else if let Some(art) = self.word_art(raw, &props, scope, &s) {
+            // WordArt draws its text in the shape's fill and line; the shape itself has neither.
+            s.text = Some(art);
+            s.fill = Some(Fill::None);
+            s.line = Some(Line::none());
+            s.effects = None;
         } else if ph.is_some() {
             // An empty placeholder draws nothing (its prompt shows only while editing).
             s.text = Some(TextBody::default());
         }
         Some(s)
+    }
+
+    /// The text of a WordArt shape ([MS-ODRAW] geometry text, `gtextUNICODE`), one paragraph per
+    /// line in the shape's fill colour. WordArt stretches its text over the shape; the text gets
+    /// the largest size at which its longest line fits the box in an average face, centred.
+    fn word_art(&self, raw: &RawShape<'a>, props: &Props<'a>, scope: &Scope, s: &Shape) -> Option<TextBody> {
+        if !matches!(raw.shape_type, 24..=31 | 136..=175) {
+            return None;
+        }
+        let text = props.string(prop::GTEXT_UNICODE)?;
+        let lines: Vec<&str> = text.split(['\r', '\n']).map(str::trim_end).collect();
+        let lines: Vec<&str> = match lines.iter().rposition(|l| !l.trim().is_empty()) {
+            Some(last) => lines[..=last].to_vec(),
+            None => return None,
+        };
+        let (w, h) = s.xfrm.map_or((0.0, 0.0), |x| (x.w, x.h));
+        let longest = lines.iter().map(|l| l.chars().count()).max().unwrap_or(1).max(1) as f64;
+        let size = (h / lines.len() as f64 * 0.8).min(w / (longest * 0.55));
+        let size = if size.is_finite() { size.clamp(4.0, 400.0) } else { 18.0 };
+        let fill = props
+            .flag(prop::FILL_BOOLS, 4)
+            .unwrap_or(true)
+            .then(|| Fill::solid(self.color_ref(prop::FILL_COLOR, 0x00FF_FFFF, Some(prop::FILL_OPACITY), props, scope)));
+        let run_props = RunProps {
+            font: props.string(prop::GTEXT_FONT).or_else(|| self.fonts.first().cloned()),
+            size: Some(size),
+            bold: Some(props.flag(prop::GTEXT_BOOLS, 5).unwrap_or(false)),
+            italic: Some(props.flag(prop::GTEXT_BOOLS, 4).unwrap_or(false)),
+            underline: Some(if props.flag(prop::GTEXT_BOOLS, 3).unwrap_or(false) { "sng" } else { "none" }.into()),
+            fill,
+            ..Default::default()
+        };
+        // `MSOTEXTALIGN`: 0 stretch, 1 centre (the default), 2 left, 3 right, then justified forms.
+        let align = match props.get(prop::GTEXT_ALIGN) {
+            Some(2) => Align::Left,
+            Some(3) => Align::Right,
+            _ => Align::Center,
+        };
+        let paragraphs = lines
+            .iter()
+            .map(|l| {
+                let mut p = Paragraph::default();
+                p.props.align = Some(align);
+                p.runs.push(Run { text: (*l).into(), props: run_props.clone(), kind: RunKind::Text });
+                p
+            })
+            .collect();
+        let body = BodyProps {
+            inset_l: Some(0.0),
+            inset_t: Some(0.0),
+            inset_r: Some(0.0),
+            inset_b: Some(0.0),
+            anchor: Some(TextAnchor::Middle),
+            anchor_ctr: Some(false),
+            wrap: Some(false),
+            autofit: Some(AutoFit::None),
+            ..Default::default()
+        };
+        Some(TextBody { body, paragraphs, ..Default::default() })
     }
 
     /// The picture a `pib` or `fillBlip` property names: a blip store entry (1-based), or a blip
