@@ -39,14 +39,34 @@ pub fn substitutes(family: &str) -> &'static [&'static str] {
         "cambria" | "cambria math" => &["Caladea", "Liberation Serif", "Times New Roman", "Merriweather"],
         "arial" | "helvetica" | "helvetica neue" | "arial nova" => &["Liberation Sans", "Arial", "Helvetica Neue", "Helvetica", "Inter"],
         "times new roman" | "times" => &["Liberation Serif", "Times New Roman", "Times", "Merriweather"],
-        "aptos" | "aptos display" | "aptos narrow" | "segoe ui" | "segoe ui light" | "segoe ui semibold" | "tahoma" | "verdana" => {
-            &["Inter", "Helvetica Neue", "Arial", "Liberation Sans"]
-        }
-        "georgia" | "garamond" | "book antiqua" | "palatino" | "palatino linotype" | "constantia" => &["Merriweather", "Liberation Serif", "Georgia"],
-        "century gothic" | "avenir" | "avenir next" | "futura" | "gill sans" | "gill sans mt" | "trebuchet ms" | "corbel" | "candara" => {
+        // Windows and Office fonts with a metric-compatible clone (Selawik, Gelasio, Liberation Sans
+        // Narrow, the TeX Gyre and IPA faces) or an open face within a few percent of their widths
+        // (DejaVu Sans for Verdana, DejaVu Sans Condensed for Tahoma, Selawik for Trebuchet MS, Noto
+        // Sans for Univers), as measured against the widths PowerPoint and Word write into PDFs.
+        "segoe ui" => &["Selawik", "Inter", "Helvetica Neue", "Arial", "Liberation Sans"],
+        "segoe ui semibold" => &["Selawik Semibold", "Selawik", "Inter", "Liberation Sans"],
+        "segoe ui light" => &["Selawik Light", "Selawik", "Inter", "Liberation Sans"],
+        "segoe ui semilight" => &["Selawik Semilight", "Selawik", "Inter", "Liberation Sans"],
+        "tahoma" => &["DejaVu Sans Condensed", "DejaVu Sans", "Inter", "Liberation Sans"],
+        "verdana" => &["DejaVu Sans", "Inter", "Liberation Sans"],
+        "aptos" | "aptos display" | "aptos narrow" => &["Inter", "Selawik", "Helvetica Neue", "Arial", "Liberation Sans"],
+        "georgia" => &["Gelasio", "Merriweather", "Liberation Serif", "Georgia"],
+        "book antiqua" | "palatino" | "palatino linotype" => &["TeX Gyre Pagella", "P052", "Merriweather", "Liberation Serif"],
+        "century" | "century schoolbook" => &["TeX Gyre Schola", "C059", "Liberation Serif"],
+        "century gothic" => &["TeX Gyre Adventor", "URW Gothic", "Montserrat", "Poppins", "Inter"],
+        "arial narrow" => &["Liberation Sans Narrow", "Nimbus Sans Narrow", "Liberation Sans"],
+        "trebuchet ms" => &["Selawik", "Montserrat", "Inter"],
+        "univers" => &["Noto Sans", "Open Sans", "Inter"],
+        "microsoft sans serif" | "ms sans serif" => &["Liberation Sans", "Arial", "Inter"],
+        "ms mincho" | "ＭＳ 明朝" => &["IPAMincho", "Noto Sans Mono CJK JP", "Noto Serif CJK JP"],
+        "ms gothic" | "ＭＳ ゴシック" => &["IPAGothic", "Noto Sans Mono CJK JP", "Noto Sans CJK JP"],
+        "ms pmincho" | "ＭＳ Ｐ明朝" => &["IPAPMincho", "Noto Serif CJK JP"],
+        "ms pgothic" | "ms ui gothic" | "ＭＳ Ｐゴシック" | "ＭＳ ＵＩゴシック" => &["IPAPGothic", "Noto Sans CJK JP"],
+        "garamond" | "constantia" => &["Merriweather", "Liberation Serif", "Georgia"],
+        "avenir" | "avenir next" | "futura" | "gill sans" | "gill sans mt" | "corbel" | "candara" => {
             &["Montserrat", "Poppins", "Avenir Next", "Inter"]
         }
-        "franklin gothic" | "franklin gothic book" | "franklin gothic medium" | "univers" => &["Open Sans", "Inter"],
+        "franklin gothic" | "franklin gothic book" | "franklin gothic medium" => &["Open Sans", "Inter"],
         "open sans" | "lato" | "roboto" | "montserrat" | "poppins" | "nunito sans" => &["Inter"],
         "playfair display" | "merriweather" | "source serif 4" | "source serif pro" => &["Merriweather", "Liberation Serif", "Georgia"],
         "source sans 3" | "source sans pro" => &["Open Sans", "Inter"],
@@ -110,8 +130,9 @@ pub fn is_monospace_family(family: &str) -> bool {
         || s.split_whitespace().any(|w| w == "mono" || w == "terminal" || w == "monospace")
 }
 
-/// Families whose open substitutes ([`substitutes`]) keep their metrics, so text drawn with
-/// them breaks into the same lines.
+/// Families whose open substitutes ([`substitutes`]) keep their metrics, or come within a few
+/// percent of them (Verdana, Tahoma, Trebuchet MS, Univers), so text drawn with them breaks into
+/// (nearly) the same lines. PowerPoint draws these Windows and Office fonts as themselves.
 fn has_metric_twin(family: &str) -> bool {
     matches!(
         family.to_ascii_lowercase().as_str(),
@@ -126,6 +147,33 @@ fn has_metric_twin(family: &str) -> bool {
             | "courier new"
             | "courier"
             | "cousine"
+            | "segoe ui"
+            | "segoe ui semibold"
+            | "segoe ui light"
+            | "segoe ui semilight"
+            | "tahoma"
+            | "verdana"
+            | "georgia"
+            | "book antiqua"
+            | "palatino linotype"
+            | "century"
+            | "century schoolbook"
+            | "century gothic"
+            | "arial narrow"
+            | "trebuchet ms"
+            | "univers"
+            | "microsoft sans serif"
+            | "ms sans serif"
+            | "ms mincho"
+            | "ms gothic"
+            | "ms pmincho"
+            | "ms pgothic"
+            | "ms ui gothic"
+            | "ＭＳ 明朝"
+            | "ＭＳ ゴシック"
+            | "ＭＳ Ｐ明朝"
+            | "ＭＳ Ｐゴシック"
+            | "ＭＳ ＵＩゴシック"
     )
 }
 
