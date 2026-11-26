@@ -1335,8 +1335,6 @@ fn chart_to(c: &dm_chart::Chart) -> cd_chart::Chart {
         raw: c.raw.clone(),
         verbatim: c.verbatim,
         kept: chart_kept_to(&c.kept),
-        // Fields newer craft-drawingml revisions add (category_format, date_1904) take their absent values.
-        ..cd_chart::Chart::default()
     };
     if !c.verbatim
         && let Some(raw) = &c.raw
