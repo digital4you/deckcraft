@@ -778,6 +778,11 @@ impl<'a> Ctx<'a> {
                 .and_then(|r| text::read_block(r.clone()))
                 .map(|mut b| {
                     b.outline_index = Some(i as usize);
+                    // The shape's own `TextRulerAtom` (beside the reference in its client text
+                    // box) sets the margins and indents of the text it shows.
+                    for (r, o) in b.ruler.iter_mut().zip(own.ruler) {
+                        *r = (o.0.or(r.0), o.1.or(r.1));
+                    }
                     b
                 })
                 .or(Some(own)),
