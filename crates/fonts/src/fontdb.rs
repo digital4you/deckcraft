@@ -155,6 +155,7 @@ fn has_metric_twin(family: &str) -> bool {
             | "verdana"
             | "georgia"
             | "book antiqua"
+            | "palatino"
             | "palatino linotype"
             | "century"
             | "century schoolbook"
